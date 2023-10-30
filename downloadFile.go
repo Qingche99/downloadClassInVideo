@@ -22,16 +22,17 @@ var (
 	dList    []downInfo
 )
 
-type downInfo struct {
-	filePath    string
-	downloadUrl string
-	fileType    string
-}
-
 func main() {
 	openCsv(fileName)
 	multiThreadedDownload(dList)
 
+}
+
+type downInfo struct {
+	filePath    string
+	downloadUrl string
+	fileType    string
+	startPos    int64
 }
 
 type ProgressWriter struct {
@@ -53,8 +54,9 @@ func (pw *ProgressWriter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
+// 字节转字符串
 func bytesToString(bytes int64) string {
-	const unit = 1000
+	const unit = 1024
 	if bytes < unit {
 		return fmt.Sprintf("%d B", bytes)
 	}
@@ -199,7 +201,50 @@ func multiThreadedDownload(downloadSlice []downInfo) {
 					fmt.Printf("下载成功 | %s | %s\n", downloadFilePath, info.downloadUrl)
 				}
 			} else {
-				fmt.Printf("文件已存在，忽略 | %s | %s\n", downloadFilePath, info.downloadUrl)
+				if _, err := os.Stat(downloadFilePath); err == nil {
+					fileInfo, err := os.Stat(downloadFilePath)
+					if err != nil {
+						fmt.Printf("获取文件信息失败 %s: %v\n", downloadFilePath, err)
+						return
+					}
+
+					info.startPos = fileInfo.Size()
+					out, err := os.OpenFile(downloadFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
+					if err != nil {
+						fmt.Printf("创建文件失败 %s: %v\n", downloadFilePath, err)
+						return
+					}
+					defer out.Close()
+
+					req, err := http.NewRequest("GET", info.downloadUrl, nil)
+					if err != nil {
+						fmt.Printf("创建请求失败 %s: %v\n", info.downloadUrl, err)
+						return
+					}
+
+					req.Header.Set("Range", fmt.Sprintf("bytes=%d-", info.startPos))
+
+					resp, err := http.DefaultClient.Do(req)
+					if err != nil {
+						fmt.Printf("请求文件失败 %s: %v\n", info.downloadUrl, err)
+						return
+					}
+					defer resp.Body.Close()
+
+					progressWriter := &ProgressWriter{
+						Total:       info.startPos + resp.ContentLength,
+						Progress:    info.startPos,
+						DownloadUrl: info.downloadUrl,
+					}
+
+					_, err = io.Copy(out, io.TeeReader(resp.Body, progressWriter))
+					if err != nil {
+						fmt.Printf("写入文件失败 | %s | %v\n", downloadFilePath, err)
+					} else {
+						fmt.Printf("下载成功 | %s \n", downloadFilePath)
+					}
+				}
+				//fmt.Printf("文件已存在，忽略 | %s | %s\n", downloadFilePath, info.downloadUrl)
 			}
 
 		}(v)

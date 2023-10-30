@@ -3,14 +3,7 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
-        <entry key="E:\下载\ClassIn平台课节视频汇总_20231024111956_1021998.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="E:\下载\ClassIn平台课节视频汇总_20231027185611_1021998.csv">
+        <entry key="\ClassIn平台课节视频汇总_20231027185611_1021998.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
