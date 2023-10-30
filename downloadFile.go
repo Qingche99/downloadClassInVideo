@@ -18,15 +18,8 @@ import (
 )
 
 var (
-	fileName = "ClassIn平台课节视频汇总_20231027185611_1021998.csv"
-	dList    []downInfo
+	dList []downInfo
 )
-
-func main() {
-	openCsv(fileName)
-	multiThreadedDownload(dList)
-
-}
 
 type downInfo struct {
 	filePath    string
@@ -105,14 +98,14 @@ func openCsv(filePath string) {
 		fmt.Println("读取CSV文件失败:", err)
 		return
 	}
-	readRows(rows)
+	readRows(filePath, rows)
 }
 
 // 读取二维切片
-func readRows(rows [][]string) {
+func readRows(filePath string, rows [][]string) {
 
 	keys := []string{"classId", "courseId", "courseName", "className", "classStart", "classEnd", "teacher", "videoTime", "videoId", "url"} // keys
-	fileRot := fileName[0 : len(fileName)-4]
+	fileRot := filePath[0 : len(filePath)-4]
 	lastId := ""
 	n := 1
 	// 遍历每一行并输出
@@ -145,7 +138,7 @@ func readRows(rows [][]string) {
 		courseName := stringRmNT(eachDownMap["courseName"])
 		className := eachDownMap["className"]
 		url := eachDownMap["url"]
-		mkPath := fmt.Sprintf("./%s/%s", fileRot, courseName) // 拼接课程文件夹路径
+		mkPath := fmt.Sprintf("%s/%s", fileRot, courseName) // 拼接课程文件夹路径
 		mkDir(mkPath)
 		dirPath := fmt.Sprintf("%s/%s-%s-%d", mkPath, classId, className, n)
 

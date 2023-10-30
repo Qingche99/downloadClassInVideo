@@ -19,9 +19,9 @@ import (
 
 var ()
 
-func main() {
-	queryDate()
-}
+//func main() {
+//	queryDate()
+//}
 
 var sid = 18266146
 
