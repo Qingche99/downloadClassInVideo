@@ -9,8 +9,8 @@ CreateDate:2023/10/30
 package main
 
 import (
-	"ClassIn.edu/github.com/gonutz/w32/v2"
 	"fmt"
+	"github.com/gonutz/w32/v2"
 	"os"
 	"syscall"
 	"unicode/utf16"
@@ -86,7 +86,10 @@ func main() {
 		fmt.Println("用户取消了选择文件")
 	}
 	fmt.Println("程序执行结束，请按 Enter 键关闭窗口...")
-	fmt.Scanln()
+	_, err = fmt.Scanln()
+	if err != nil {
+		return
+	}
 	os.Exit(0)
 
 }
