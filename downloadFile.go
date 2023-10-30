@@ -181,7 +181,7 @@ func multiThreadedDownload(downloadSlice []downInfo) {
 
 				out, err := os.Create(downloadFilePath)
 				if err != nil {
-					fmt.Printf("创建文件失败 %s: %v\n", downloadFilePath, err)
+					fmt.Printf("创建文件失败：%s: %v\n", downloadFilePath, err)
 					return
 				}
 				defer out.Close()
