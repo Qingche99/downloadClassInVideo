@@ -5,7 +5,7 @@ FileName:main.go
 UserName:QH
 CreateDate:2023/10/30
 */
-
+//go:generate rsrc -ico resource/icon.ico -manifest resource/goversioninfo.exe.manifest -o main.syso
 package main
 
 import (
@@ -22,6 +22,7 @@ const (
 )
 
 func main() {
+
 	// 获取控制台窗口句柄
 	handle := w32.GetConsoleWindow()
 
