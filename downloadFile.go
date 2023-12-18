@@ -71,7 +71,11 @@ func mkDir(path string) {
 	//fmt.Println("文件夹创建成功")
 }
 
-// 字符串删除\n\t
+// stringRmNT
+//
+//	@Description: 字符串删除\n\t
+//	@param strContent
+//	@return string
 func stringRmNT(strContent string) string {
 
 	retStrN := strings.ReplaceAll(strContent, "\n", "")
@@ -155,78 +159,39 @@ func readRows(filePath string, rows [][]string) {
 
 }
 
-// 多线程下载方法
+// multiThreadedDownload
+//
+//	@Description: 多线程下载方法
+//	@param downloadSlice
 func multiThreadedDownload(downloadSlice []downInfo) {
 	var wg sync.WaitGroup
 	wg.Add(len(downloadSlice))
 	for _, v := range downloadSlice {
 		go func(info downInfo) {
 			defer wg.Done()
-
-			resp, err := http.Get(info.downloadUrl)
-			if err != nil {
-				fmt.Printf("下载文件失败 %s: %v\n", info.downloadUrl, err)
-				return
-			}
-			defer resp.Body.Close()
-
-			downloadFilePath := info.filePath + info.fileType
-
-			if _, err := os.Stat(downloadFilePath); os.IsNotExist(err) { // 检查文件是否存在
-
-				out, err := os.Create(downloadFilePath)
+			head, _ := http.Head(info.downloadUrl)
+			if head.StatusCode == 200 {
+				resp, err := http.Get(info.downloadUrl)
 				if err != nil {
-					fmt.Printf("创建文件失败%s: %v\n", downloadFilePath, err)
+					fmt.Printf("下载文件失败 %s: %v\n", info.downloadUrl, err)
 					return
 				}
-				defer out.Close()
+				defer resp.Body.Close()
 
-				progressWriter := &ProgressWriter{
-					Total:       resp.ContentLength,
-					Progress:    0,
-					DownloadUrl: info.downloadUrl,
-				}
+				downloadFilePath := info.filePath + info.fileType
 
-				_, err = io.Copy(out, io.TeeReader(resp.Body, progressWriter))
-				if err != nil {
-					fmt.Printf("写入文件失败 | %s | %v\n", downloadFilePath, err)
-				} else {
-					fmt.Printf("下载成功 | %s | %s\n", downloadFilePath, info.downloadUrl)
-				}
-			} else {
-				if _, err := os.Stat(downloadFilePath); err == nil {
-					fileInfo, err := os.Stat(downloadFilePath)
+				if _, err := os.Stat(downloadFilePath); os.IsNotExist(err) { // 检查文件是否存在
+
+					out, err := os.Create(downloadFilePath)
 					if err != nil {
-						fmt.Printf("获取文件信息失败 %s: %v\n", downloadFilePath, err)
-						return
-					}
-
-					info.startPos = fileInfo.Size()
-					out, err := os.OpenFile(downloadFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
-					if err != nil {
-						fmt.Printf("创建文件失败 %s: %v\n", downloadFilePath, err)
+						fmt.Printf("创建文件失败%s: %v\n", downloadFilePath, err)
 						return
 					}
 					defer out.Close()
 
-					req, err := http.NewRequest("GET", info.downloadUrl, nil)
-					if err != nil {
-						fmt.Printf("创建请求失败 %s: %v\n", info.downloadUrl, err)
-						return
-					}
-
-					req.Header.Set("Range", fmt.Sprintf("bytes=%d-", info.startPos))
-
-					resp, err := http.DefaultClient.Do(req)
-					if err != nil {
-						fmt.Printf("请求文件失败 %s: %v\n", info.downloadUrl, err)
-						return
-					}
-					defer resp.Body.Close()
-
 					progressWriter := &ProgressWriter{
-						Total:       info.startPos + resp.ContentLength,
-						Progress:    info.startPos,
+						Total:       resp.ContentLength,
+						Progress:    0,
 						DownloadUrl: info.downloadUrl,
 					}
 
@@ -234,10 +199,56 @@ func multiThreadedDownload(downloadSlice []downInfo) {
 					if err != nil {
 						fmt.Printf("写入文件失败 | %s | %v\n", downloadFilePath, err)
 					} else {
-						fmt.Printf("下载成功 | %s \n", downloadFilePath)
+						fmt.Printf("下载成功  |%s | %s\n", downloadFilePath, info.downloadUrl)
 					}
+				} else {
+					if _, err := os.Stat(downloadFilePath); err == nil {
+						fileInfo, err := os.Stat(downloadFilePath)
+						if err != nil {
+							fmt.Printf("获取文件信息失败 %s: %v\n", downloadFilePath, err)
+							return
+						}
+
+						info.startPos = fileInfo.Size()
+						out, err := os.OpenFile(downloadFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
+						if err != nil {
+							fmt.Printf("创建文件失败 %s: %v\n", downloadFilePath, err)
+							return
+						}
+						defer out.Close()
+
+						req, err := http.NewRequest("GET", info.downloadUrl, nil)
+						if err != nil {
+							fmt.Printf("创建请求失败 %s: %v\n", info.downloadUrl, err)
+							return
+						}
+
+						req.Header.Set("Range", fmt.Sprintf("bytes=%d-", info.startPos))
+
+						resp, err := http.DefaultClient.Do(req)
+						if err != nil {
+							fmt.Printf("请求文件失败 %s: %v\n", info.downloadUrl, err)
+							return
+						}
+						defer resp.Body.Close()
+
+						progressWriter := &ProgressWriter{
+							Total:       info.startPos + resp.ContentLength,
+							Progress:    info.startPos,
+							DownloadUrl: info.downloadUrl,
+						}
+
+						_, err = io.Copy(out, io.TeeReader(resp.Body, progressWriter))
+						if err != nil {
+							fmt.Printf("写入文件失败 | %s | %v\n", downloadFilePath, err)
+						} else {
+							fmt.Printf("下载成功 | %s \n", downloadFilePath)
+						}
+					}
+					//fmt.Printf("文件已存在，忽略 | %s | %s\n", downloadFilePath, info.downloadUrl)
 				}
-				//fmt.Printf("文件已存在，忽略 | %s | %s\n", downloadFilePath, info.downloadUrl)
+			} else {
+				fmt.Printf("资源不存在|%s \n", info.filePath+info.fileType)
 			}
 
 		}(v)
